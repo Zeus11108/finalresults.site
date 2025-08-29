@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<!-- Mirrored from finalresults.nec.gov.ly/ExamAnswerSheet.html?dataRecId=${subject.assdIdentRec} by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 08 Aug 2025 11:05:08 GMT -->
+<head><meta charset="utf-8">
+    <head>
+    <meta charset="UTF-8">
+    <title>TIFF to PNG Base64</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&amp;display=swap" rel="stylesheet">
+    <script src="../code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="../cdn.jsdelivr.net/npm/imagejextension%400.3.1/src/lib/tiff/tiff.min.js"></script>
+    <style>
+        html, body {
+            font-family: "Zain";
+            margin: 0;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* height: 100vh; */
+            background: none;
+        }
+
+        #output {
+            /* height: 90vh;
+            width: 90vw; */
+            transform: scaleX(0.5);
+            transform-origin: center;
+            /* display: block; */
+            overflow: hidden;
+            display: block;
+            margin: auto;
+        }
+        #print {
+            font-family: "Zain";
+            width: auto;
+            background: #0b5ed7;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-inline-end: 10px;
+            font-weight: bold;
+            
+        }
+        #print:hover {
+            background: #0a4aa8;
+        }
+        @media (max-width: 767px) {
+            #output {
+                height: 90vh;
+                width: 95vw;
+                transform: scaleY(0.8);
+            }
+        }
+        @media print {
+            html, body {
+                margin: 0;
+                padding: 0;
+                align-items: normal;
+            }
+            #output {
+                height: 100%;
+                width: 100%;
+                transform: scaleY(1);
+                padding: 0;
+                margin: 0;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+            #print {
+                display: none;
+            }
+        }
+
+    .popupButtonsBar {
+        background-color: #333;
+        width: 100%;
+        height: 38px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        direction: ltr;
+        padding: 5px;
+        z-index: 100000;
+        text-align: center;
+    }
+    </style>
+  </head>
+  <body id="imageBody">
+    <div class="popupButtonsBar" id="popupButtonsBar" data-link="ExamAnswerSheet.html?dataRecId=60229210">
+        <button id="print" title="طباعة ورقة الإجابة" class="popupButtons">طباعة الورقة</button>
+    </div>
+    <span id="message"></span>
+        <img id="output" />
+    <script>
+        var req_timeout = 10000;
+        
+        $(function() {
+
+			var getUrlParameter = function getUrlParameter(sParam) {
+				var sPageURL = window.location.search.substring(1),
+					sURLVariables = sPageURL.split('&'),
+					sParameterName,
+					i;
+
+				for (i = 0; i < sURLVariables.length; i++) {
+					sParameterName = sURLVariables[i].split('=');
+
+					if (sParameterName[0] === sParam) {
+						return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+					}
+				}
+				return false;
+			};
+			
+            $(document).on('click', 'button#print', function (e) {
+                window.print();
+            });
+
+            var dataRecId = getUrlParameter('dataRecId');
+
+			//console.log( dataRecId );
+
+            $.ajax({
+                url: '/api/fResult/DataRec',//2917182
+                // url:'ExamAnswerSheet.json',
+                // url: 'https://finalresults.nec.gov.ly/api/fResult/DataRec',
+                timeout: req_timeout,
+                crossDomain:true,
+                dataType: "json", // Indicate that you expect JSON back
+                method: 'GET',
+                data: { dataRecId: dataRecId },
+                success: function(response) {
+                    if(response.isCompleteBitmap) {
+                        let baseStr64 = response.imageTop;
+                        $('#output').attr('src', "data:image/png;base64," + baseStr64);
+                        
+                    }
+                    else {
+                    if( response.formType == 31 )
+                        renderImage(response, 'ExamAnswerSheetFormAr.jpg');
+                    if( response.formType == 33 )
+                        renderImage(response, 'ExamAnswerSheetFormEn.jpg');
+                    }
+                },
+                error: function() {
+                    $('#message').html(`<p>لم يتم العثور على معلومات الطالب.</p>`);
+                }
+            });
+
+                function renderImage(jsonData, backgroundImageUrl) {
+                    
+                    
+                    let horz = parseInt($.urlParam('horz'));
+                    let vert = parseInt($.urlParam('vert'));
+
+                    if (isNaN(horz)) horz = 0;
+                    if (isNaN(vert)) vert = 0;
+                    
+                    // console.log(horz);
+
+                    // Loading back image
+                    const bgImg = new Image();
+                    bgImg.crossOrigin = "anonymous"; // للسماح بتحميل صور من مواقع أخرى (إذا كانت تدعم CORS)
+                    bgImg.src = backgroundImageUrl;
+
+                    // After loading back image
+                    bgImg.onload = function () {
+                        // Extract base64 and convert TIFF to canvas
+                        const tiffBase64 = jsonData.imageTop;
+                        const binary = atob(tiffBase64);
+                        const len = binary.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binary.charCodeAt(i);
+                        }
+
+                        const tiff = new Tiff({ buffer: bytes });
+                        const fgCanvas = tiff.toCanvas();
+                        const fgWidth = fgCanvas.width;
+                        const fgHeight = fgCanvas.height;
+
+                        // Convert main canvas with size of front image.
+                        const mainCanvas = document.createElement("canvas");
+                        mainCanvas.width = fgWidth;
+                        mainCanvas.height = fgHeight;
+                        const ctx = mainCanvas.getContext("2d");
+
+                        // Draw first image, resize and center it
+                        ctx.drawImage(bgImg, 0, 0, fgWidth, fgHeight);
+                        
+
+                        // Make white in front image transparent
+                        const fgCtx = fgCanvas.getContext("2d");
+                        const imageData = fgCtx.getImageData(0, 0, fgWidth, fgHeight);
+                        const data = imageData.data;
+
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i], g = data[i + 1], b = data[i + 2];
+                            if (r === 255 && g === 255 && b === 255) {
+                                data[i + 3] = 0; // 100 transparent
+                            }
+                        }
+
+                        fgCtx.putImageData(imageData, 0, 0);
+
+                        
+                        
+                        // studResp = jsonData.studResp;
+
+
+                        fgCtx.save(); // حفظ الحالة الحالية
+                        fgCtx.translate(10, 30); // حرك نقطة الأصل إلى حيث تريد رسم النص
+                        fgCtx.scale(2, 1);       // تمديد عرضي بمقدار 2x (بدون تمديد طولي)
+
+                        fgCtx.fillStyle = "rgba(165, 201, 255, .3)";
+                        fgCtx.fillRect(75, 200, 245, 100);
+                        fgCtx.fillStyle = "rgba(255, 165, 0, .3)";
+                        fgCtx.fillRect(75, 310, 245, 110);
+                        fgCtx.strokeStyle = "CornflowerBlue";
+                        fgCtx.lineWidth = 1.5;
+                        fgCtx.strokeRect(75, 200, 245, 100);
+                        fgCtx.strokeStyle = "orange";
+                        fgCtx.strokeRect(75, 310, 245, 110);
+
+                        
+
+                        fgCtx.font = "bold 18px Arial";
+                        fgCtx.textAlign = "right";
+                        fgCtx.fillStyle = "black";
+                        let lineHeight = 26;
+                        let startLine = 230;
+                        fgCtx.fillText('ط:    إجابة الطالب', 300, startLine + (lineHeight * 0));
+                        fgCtx.fillText('ص:  الإجابة الصحيحة', 300, startLine + (lineHeight * 1));
+                        fgCtx.fillText('درجة تعويضية    :O', 303, startLine + (lineHeight * 2));
+                        // fgCtx.fillText(':عدد الإجابات', 300, startLine + (lineHeight * 4));
+                        // fgCtx.fillText( jsonData.totalQCount, 100, startLine + (lineHeight * 4));
+                        
+                        fgCtx.fillText(':عدد إجابات الطالب', 300, startLine + (lineHeight * 4));
+                        fgCtx.fillText( jsonData.respCount, 140, startLine + (lineHeight * 4));
+                        fgCtx.fillText(':عدد الإجابات الصحيحة', 300, startLine + (lineHeight * 5));
+                        fgCtx.fillText( jsonData.correctCount, 140, startLine + (lineHeight * 5));
+                        fgCtx.fillText(':الدرجات التعويضية', 300, startLine + (lineHeight * 6));
+                        fgCtx.fillText( (jsonData.compPoints==0)?'-':jsonData.compPoints, 140, startLine + (lineHeight * 6));
+                        fgCtx.fillText(':الإجمالي', 300, startLine + (lineHeight * 7));
+                        fgCtx.fillText( jsonData.totalQCount + '\\' + jsonData.totalPoints, 140, startLine + (lineHeight * 7) );
+                        
+                        let xStart, yStart, ltr, xCol;
+                        if( jsonData.formType == 33 ) {
+                            var answerLetters = ['A', 'B', 'C', 'D', 'E'];
+                            xCol = [390, 565, 740];
+                            yStart = 517; ltr = 1;
+                        }
+                        else {
+                            var answerLetters = ['أ', 'ب', 'ج', 'د', 'هـ'];
+                            xCol = [750, 565, 380];
+                            yStart = 517; ltr = -1;
+                        }
+                        console.log(xStart);
+                        let studResText = '';
+                        let corrRespText = '';
+                        lineHeight = 20;
+
+                        fgCtx.fillStyle = "black";
+                        fgCtx.textAlign = "center";
+
+                        if( jsonData.totalQCount > 0 ) {
+                            fgCtx.fillText('ط', xCol[0], yStart-30);
+                            fgCtx.fillText('ص', xCol[0]+18, yStart-30);
+                        }
+                        if( jsonData.totalQCount > 35 ) {
+                            //xStart += 175;
+                            fgCtx.fillText('ط', xCol[1], yStart-30);
+                            fgCtx.fillText('ص', xCol[1]+18, yStart-30);
+                        }
+                        if( jsonData.totalQCount > 50 ) {
+                            //xStart += 175;
+                            fgCtx.fillText('ط', xCol[2], yStart-30);
+                            fgCtx.fillText('ص', xCol[2]+18, yStart-30);
+                        }
+                        
+                        for (let i = 0; i < jsonData.studResp.length; i++) {
+
+                            if( i == 0 ) xStart = xCol[0];
+                            if( i == 35 ) xStart = xCol[1];
+                            if( i == 70 ) xStart = xCol[2];
+                            
+                            if( jsonData.formType == 33 )
+                                fgCtx.font = "bold 19px Arial";
+                            else
+                                fgCtx.font = "bold 20px Arial";
+                            
+                            studResText = answerLetters[parseInt(jsonData.studResp[i]) - 1] || "";
+                            corrRespText = answerLetters[parseInt(jsonData.corrResp[i]) - 1] || "";
+
+                            
+                            if(jsonData.compResp[i] == 1) {
+                                // Circle on letter
+                                fgCtx.beginPath();
+                                fgCtx.strokeStyle = "black";
+                                fgCtx.lineWidth = 2;
+                                fgCtx.arc(xStart, yStart+(i%35*lineHeight)-7, 10, 0, 2 * Math.PI);
+                                // fgCtx.fillStyle = "rgba(0, 255, 0, 1)";
+                                // fgCtx.fill();
+                                fgCtx.stroke();
+                            }
+                            if(studResText == corrRespText) fgCtx.fillStyle = "green";
+                            else fgCtx.fillStyle = "red";
+                            fgCtx.fillText(studResText, xStart, yStart+(i%35*lineHeight));
+
+                            fgCtx.fillStyle = "blue";
+                            fgCtx.fillText(corrRespText, xStart + 20, yStart+(i%35*lineHeight));
+
+                            
+
+                        }
+                        fgCtx.restore(); // استعادة الوضع الأصلي
+                        
+
+                        
+
+                        
+                        
+
+
+                        // Merge front image over the back one
+                        // ctx.drawImage(fgCanvas, 0, 0);// Merge without shift
+                        ctx.drawImage(fgCanvas, horz, vert);
+
+                        // Convert the result to PNG base64
+                        const finalPngBase64 = mainCanvas.toDataURL("image/png");
+
+                        // View
+                        $("#output").attr("src", finalPngBase64);
+                        // $('#imageBody').html(`<img src="${finalPngBase64}" style="max-width:100vw; max-height:100vh; display:block; margin:auto;" />`);
+                        // window.location.href = finalPngBase64;
+
+                        
+                    };
+
+                    // Loading error log
+                    bgImg.onerror = function () {
+                        console.error("فشل تحميل صورة الخلفية:", backgroundImageUrl);
+                    };
+
+
+                    
+                }
+
+
+
+            $.urlParam = function(name){
+                var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+                if (results==null) {
+                    return null;
+                }
+                return decodeURI(results[1]) || 0;
+            }
+
+
+            
+
+
+        });
+        
+    </script>
+  </body>
+
+<!-- Mirrored from finalresults.nec.gov.ly/ExamAnswerSheet.html?dataRecId=${subject.assdIdentRec} by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 08 Aug 2025 11:05:09 GMT -->
+</html>
